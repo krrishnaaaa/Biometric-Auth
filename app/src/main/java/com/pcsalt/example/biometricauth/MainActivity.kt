@@ -4,10 +4,12 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatActivity
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import com.pcsalt.example.biometricauth.databinding.ActivityMainBinding
+import com.pcsalt.example.biometricauth.extension.showAlert
 import com.pcsalt.example.biometricauth.extension.showToast
 import java.util.concurrent.Executor
 
@@ -57,11 +59,13 @@ class MainActivity : AppCompatActivity() {
             })
 
         promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Biometric login for my app")
-            .setSubtitle("Log in using your biometric credential")
+            .setTitle("${getString(R.string.app_name)} Locked")
+            .setSubtitle("Log in using your biometric credential or Device PIN")
 //          Cannot use setNegativeButtonText() and setAllowedAuthenticators() both at a time
+//          If only BIOMETRIC_STRONG is used in setAllowedAuthenticators() then
+//          setNegativeButtonText() needs to be provided
 //            .setNegativeButtonText("Use different Auth")
-            .setAllowedAuthenticators(DEVICE_CREDENTIAL)
+            .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
             .build()
     }
 
@@ -96,6 +100,15 @@ class MainActivity : AppCompatActivity() {
             }
             BiometricPrompt.ERROR_NO_BIOMETRICS -> {
                 showToast("No biometric registered")
+                showAlert(
+                    "Error",
+                    "Currently no fingerprint is registered. Please register at least one fingerprint to enable this feature.",
+                    "Register",
+                    {
+                        val intent = Intent(Settings.ACTION_BIOMETRIC_ENROLL); startActivity(intent)
+                    },
+                    "Cancel",
+                    { biometricPrompt.authenticate(promptInfo) })
             }
             BiometricPrompt.ERROR_HW_NOT_PRESENT -> {
                 showToast("Required hardware not present")
@@ -106,9 +119,15 @@ class MainActivity : AppCompatActivity() {
             }
             BiometricPrompt.ERROR_NO_DEVICE_CREDENTIAL -> {
                 showToast("The device does not have pin, pattern, or password set up.")
-                val intent =
-                    Intent(Settings.ACTION_SECURITY_SETTINGS)//(DevicePolicyManager.ACTION_SET_NEW_PASSWORD)
-                startActivity(intent)
+                showAlert(
+                    "Error",
+                    "The device does not have pin, pattern, or password set up. Please add any of the options to enable this feature.",
+                    "Setup",
+                    {
+                        val intent =
+                            Intent(Settings.ACTION_SECURITY_SETTINGS)//(DevicePolicyManager.ACTION_SET_NEW_PASSWORD)
+                        startActivity(intent)
+                    }, "Dismiss", {})
             }
         }
     }

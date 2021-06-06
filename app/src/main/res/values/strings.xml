@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">BiometricAuth</string>
+    <string name="show_authentication">Show Authentication</string>
 </resources>
